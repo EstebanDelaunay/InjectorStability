@@ -20,87 +20,65 @@ droplets. We generate animations online using Basilisk View. */
 
 // =======================================================
 // Time parameters =======================================
-const double tEnd = 5e0;
-const double tStep = 5e-1;
+const double tEnd = 2e0;
+const double tStep = 1e-2;
 
 // =======================================================
-// Space parameters =======================================
-const double domainLength = 6e0 [1];
+// Space parameters ======================================
+const double domainLength = 2. [1];
+const double jetThickness = 0.01;
 
-
-/**
-We define the radius of the jet, the initial jet length, the Reynolds
-number and the surface tension coefficient. */
-
-double radius = 1. / 12.;
-double length = 0.025;
+// =======================================================
+// Physical parameters ===================================
 double Re = 5800;
 double SIGMA = 3e-5;
+double u0 = 1.;
 
-/**
-The default maximum level of refinement is 10 and the error threshold
-on velocity is 0.1. */
+// =======================================================
+// Mesh parameters ===================================
+int maxlevel = 8; // default maximum level of refinement
+double uemax = 0.1; // error threshold on velocity
 
-int maxlevel = 7;
-double uemax = 0.1;
 
-/**
-To impose boundary conditions on a disk we use an auxilliary volume 
+
+/* To impose boundary conditions on a disk we use an auxilliary volume 
 fraction field *f0* which is one inside the cylinder and zero outside. 
 
 We then set an oscillating inflow velocity on the
 left-hand-side and free outflow on the right-hand-side. */
 
-double u0 = 1., au = 0.05, T0 = 0.1;
-
 scalar f0[];
-u.n[left] = dirichlet(f0[] * (u0 + au * sin(2. * pi * t / T0)));
+u.n[left] = dirichlet(f0[] * u0);
 u.t[left] = dirichlet(0);
-
-
-#if dimension > 2
-u.r[left] = dirichlet(0);
-#endif
 
 p[left] = neumann(0);
 f[left] = f0[];
 
 u.n[right] = neumann(0);
-p[right] = dirichlet(0);
+p[right] = neumann(0);
+f[right] = f0[];
 
 // =======================================================
 // main ==================================================
-
-/**
-The program can take two optional command-line arguments: the maximum
-level and the error threshold on velocity. */
-
-int main(int argc, char *argv[])
+int main()
 {
     periodic(top);
 
-    if (argc > 1)
-        maxlevel = atoi(argv[1]);
-    if (argc > 2)
-        uemax = atof(argv[2]);
-
-    /**
-    The initial domain is discretised with $64^3$ grid points. We set
+    /* The initial domain is discretised with $64^3$ grid points. We set
     the origin and domain size. */
 
     init_grid(64);
     origin(0, -domainLength/2., -domainLength/2.);
     size(domainLength);
 
-    /**
-    We set the density and viscosity of each phase as well as the
+    /* We set the density and viscosity of each phase as well as the
     surface tension coefficient and start the simulation. */
 
     rho1 = 1. [0];
     rho2 = rho1 / 27.84;
 
-    mu1 = 2. * u0 * radius / Re * rho1;
-    mu2 = 2. * u0 * radius / Re * rho2;
+    mu1 = 2. * u0 * jetThickness / Re * rho1;
+    mu2 = 2. * u0 * jetThickness / Re * rho2;
 
     f.sigma = SIGMA;
 
@@ -109,30 +87,25 @@ int main(int argc, char *argv[])
 
 // =======================================================
 // Initial conditions ====================================
-
 event init(t = 0)
 {
-    if (!restore(file = "restart"))
+    /* We use a static refinement down to *maxlevel* in a cylinder 1.2
+    times longer than the initial jet and twice the radius. */
+
+    refine(sq(y) < 2 * sq(jetThickness) && level < maxlevel);
+
+    /* We initialise the auxilliary volume fraction field for a cylinder of
+    constant radius. */
+
+    fraction(f0, sq(y) < sq(jetThickness) );
+    f0.refine = f0.prolongation = fraction_refine;
+    restriction({f0}); // for boundary conditions on levels
+
+    /* We then use this to define the initial jet and its velocity. */
+    foreach ()
     {
-
-        /* We use a static refinement down to *maxlevel* in a cylinder 1.2
-        times longer than the initial jet and twice the radius. */
-
-        refine(x < 1.2 * length && sq(y) + sq(z) < 2. * sq(radius) && level < maxlevel);
-
-        /* We initialise the auxilliary volume fraction field for a cylinder of
-        constant radius. */
-
-        fraction(f0, 1. - );
-        f0.refine = f0.prolongation = fraction_refine;
-        restriction({f0}); // for boundary conditions on levels
-
-        /* We then use this to define the initial jet and its velocity. */
-        foreach ()
-        {
-            f[] = f0[] * (x < length);
-            u.x[] = u0 * f[];
-        }
+        f[] = f0[];
+        u.x[] = u0 * f[];
     }
 }
 
