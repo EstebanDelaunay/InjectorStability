@@ -1,81 +1,81 @@
 /**
 # Atomisation of a pulsed liquid jet
 
-A dense cylindrical liquid jet is injected into a stagnant lighter
-phase (density ratio 1/27.84). The inflow velocity is modulated
-sinusoidally to promote the growth of primary shear
-instabilities. Surface tension is included and ultimately controls the
-characteristic scale of the smallest droplets.
+CC99='mpicc -std=c99' qcc -Wall -O2 -autolink -D_MPI=1 main.c -o main -lm -lfb_tiny ; mpirun -np 8 ./main
 
-We solve the two-phase Navier--Stokes equations with surface
-tension. We need the *tag()* function to count the number of
-droplets. We generate animations online using Basilisk View. */
+*/
 
 #include "navier-stokes/centered.h"
 #include "two-phase.h"
 #include "tension.h"
-#include "tag.h"
+#include "reduced.h"
+
 #include "view.h"
 #include "common.h"
+#include "fractions.h"
+
+
 
 // =======================================================
 // Time parameters =======================================
-const double tEnd = 2e0;
-const double tStep = 1e-2;
+const double tEnd = 5e0;
+const double tStep = 1e-1;
+
+
 
 // =======================================================
 // Space parameters ======================================
-const double domainLength = 2. [1];
-const double jetThickness = 0.01;
+const double jetThickness = 0.1;
+const double domainLength = 100. * jetThickness;
+
+
 
 // =======================================================
 // Physical parameters ===================================
-double Re = 5800;
-double SIGMA = 3e-5;
-double u0 = 1.;
+scalar f0[];
+const double Re = 5;
+const double Fr = 1.;
+
+const double SIGMA = 3e-5;
+const double u0 = 0.1;
+
+
 
 // =======================================================
-// Mesh parameters ===================================
-int maxlevel = 8; // default maximum level of refinement
-double uemax = 0.1; // error threshold on velocity
+// Mesh parameters =======================================
+const int maxlevel = 8; // default maximum level of refinement
+const double uemax = 0.1; // error threshold on velocity
 
 
-
-/* To impose boundary conditions on a disk we use an auxilliary volume 
-fraction field *f0* which is one inside the cylinder and zero outside. 
-
-We then set an oscillating inflow velocity on the
-left-hand-side and free outflow on the right-hand-side. */
-
-scalar f0[];
+// The inflow condition fixes the velocity
 u.n[left] = dirichlet(f0[] * u0);
 u.t[left] = dirichlet(0);
-
 p[left] = neumann(0);
-f[left] = f0[];
 
+// Outflow uses standard Neumann/Dirichlet conditions.
 u.n[right] = neumann(0);
-p[right] = neumann(0);
-f[right] = f0[];
+u.t[right] = neumann(0);
+p[right]    = dirichlet(0.);
+pf[right]   = dirichlet(0.);
+
+// Fraction boundaries
+f[left] = f0[];
+f[right] = dirichlet(0);
+
+
 
 // =======================================================
 // main ==================================================
 int main()
 {
-    periodic(top);
+    //periodic(front);
 
-    /* The initial domain is discretised with $64^3$ grid points. We set
-    the origin and domain size. */
-
-    init_grid(64);
-    origin(0, -domainLength/2., -domainLength/2.);
+    init_grid(1 << maxlevel);
+    origin(0., -domainLength/2.);
     size(domainLength);
 
-    /* We set the density and viscosity of each phase as well as the
-    surface tension coefficient and start the simulation. */
-
     rho1 = 1. [0];
-    rho2 = rho1 / 27.84;
+    rho2 = rho1 / 815.;
 
     mu1 = 2. * u0 * jetThickness / Re * rho1;
     mu2 = 2. * u0 * jetThickness / Re * rho2;
@@ -85,29 +85,32 @@ int main()
     run();
 }
 
+
+
 // =======================================================
 // Initial conditions ====================================
 event init(t = 0)
 {
-    /* We use a static refinement down to *maxlevel* in a cylinder 1.2
-    times longer than the initial jet and twice the radius. */
+    TOLERANCE = 1e-4 [*];
 
-    refine(sq(y) < 2 * sq(jetThickness) && level < maxlevel);
+    G.x = sq(u0 / Fr) / jetThickness; // maybe domainLength
 
-    /* We initialise the auxilliary volume fraction field for a cylinder of
-    constant radius. */
+    /* We use a static refinement down to *maxlevel* in a plan twice the width. */
+    refine(fabs(y) < 2. * jetThickness && level < maxlevel);
 
-    fraction(f0, sq(y) < sq(jetThickness) );
+    fraction(f0, fabs(y) < jetThickness );
+
     f0.refine = f0.prolongation = fraction_refine;
     restriction({f0}); // for boundary conditions on levels
 
-    /* We then use this to define the initial jet and its velocity. */
     foreach ()
     {
         f[] = f0[];
         u.x[] = u0 * f[];
     }
 }
+
+
 
 // =======================================================
 // Log ===================================================
@@ -116,43 +119,38 @@ event logfile(i++)
 {
     if (i == 0)
     {
-        fprintf(stderr, "t dt mgp.i mgpf.i mgu.i grid->tn perf.t perf.speed\n");
+        fprintf(stderr, "t dt mgp.i mgpf.i mgu.i grid->tn perf.t \n");
     }
 
-    fprintf(stderr, "%g %g %d %d %d %ld %g %g\n",
-            t, dt, mgp.i, mgpf.i, mgu.i, grid->tn, perf.t, perf.speed);
+    fprintf(stderr, "%.5f %.2e %2d %2d %2d %ld %.2f\n",
+            t, dt, mgp.i, mgpf.i, mgu.i, grid->tn, perf.t);
 }
+
+
 
 // =======================================================
 // Movie =================================================
 
 event movie(t += tStep; t <= tEnd)
-{
-    #if dimension == 2
-        scalar omega[];
-        vorticity(u, omega);
-        view(tx = -0.5);
-        clear();
-        draw_vof("f");
-        squares("omega", linear = true, spread = 10);
-        box();
-    #else  // 3D
-        scalar pid[];
-        foreach ()
-            pid[] = fmod(pid() * (npe() + 37), npe());
-        view(camera = "iso",
-            fov = 14.5, tx = -0.418, ty = 0.288,
-            width = 1600, height = 1200);
-        clear();
-        draw_vof("f");
-    #endif // 3D
+{ 
+    scalar omega[];
+    vorticity(u, omega);
+    view(tx = -.5);
+    clear();
+    draw_vof("f");
+    //squares("omega", linear = true, spread = 10);
+    squares("f", min=0., max=1.);
+    //cells();
+    box();
     save("movie.mp4");
 }
+
+
 
 // =======================================================
 // Mesh adaptation =======================================
 
 event adapt(i++)
 {
-    adapt_wavelet({f, u}, (double[]){0.01, uemax, uemax, uemax}, maxlevel);
+    adapt_wavelet({f, u}, (double[]){0.01, uemax, uemax, uemax}, maxlevel, 3);
 }
