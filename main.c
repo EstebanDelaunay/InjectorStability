@@ -1,9 +1,8 @@
-/**
-# Atomisation of a pulsed liquid jet
-
+/*
+Atomisation of a pulsed liquid jet
 CC99='mpicc -std=c99' qcc -Wall -O2 -autolink -D_MPI=1 main.c -o main -lm -lfb_tiny ; mpirun -np 8 ./main
-
 */
+#include <math.h>
 
 #include "navier-stokes/centered.h"
 #include "two-phase.h"
@@ -15,12 +14,10 @@ CC99='mpicc -std=c99' qcc -Wall -O2 -autolink -D_MPI=1 main.c -o main -lm -lfb_t
 #include "fractions.h"
 
 
-
 // =======================================================
 // Time parameters =======================================
 const double tEnd = 5e0;
 const double tStep = 1e-1;
-
 
 
 // =======================================================
@@ -29,16 +26,27 @@ const double jetThickness = 0.1;
 const double domainLength = 100. * jetThickness;
 
 
-
 // =======================================================
 // Physical parameters ===================================
+// L means liquid ; G means gaz
+
 scalar f0[];
-const double Re = 5;
+const double Re = 10;
 const double Fr = 1.;
+const double Bo = 30.;
 
-const double SIGMA = 3e-5;
-const double u0 = 0.1;
-
+// Density
+const double rhoL = 1.;
+const double rhoG = rhoL * 1e-3;
+// Viscosity
+const double muL= 1e-3;
+const double muG = 1e-5;
+// Velocity (defined by Re)
+const double u0 = Re * muL / ( rhoL  * jetThickness);
+// Gravity (defined by Fr)
+const double gravity = (u0 / Fr) * (u0 / Fr) / jetThickness;
+// Surface tension (defined by Bo)
+const double SIGMA = (rhoL - rhoG) * gravity * jetThickness * jetThickness / Bo; //1e-2
 
 
 // =======================================================
@@ -47,6 +55,8 @@ const int maxlevel = 8; // default maximum level of refinement
 const double uemax = 0.1; // error threshold on velocity
 
 
+// =======================================================
+// Boundary conditions ===================================
 // The inflow condition fixes the velocity
 u.n[left] = dirichlet(f0[] * u0);
 u.t[left] = dirichlet(0);
@@ -63,7 +73,6 @@ f[left] = f0[];
 f[right] = dirichlet(0);
 
 
-
 // =======================================================
 // main ==================================================
 int main()
@@ -74,17 +83,16 @@ int main()
     origin(0., -domainLength/2.);
     size(domainLength);
 
-    rho1 = 1. [0];
-    rho2 = rho1 / 815.;
+    rho1 = 1.;
+    rho2 = rho1 * 1e-3;
 
-    mu1 = 2. * u0 * jetThickness / Re * rho1;
-    mu2 = 2. * u0 * jetThickness / Re * rho2;
+    mu1 = 1e-3;
+    mu2 = 1e-5;
 
     f.sigma = SIGMA;
 
     run();
 }
-
 
 
 // =======================================================
@@ -93,7 +101,7 @@ event init(t = 0)
 {
     TOLERANCE = 1e-4 [*];
 
-    G.x = sq(u0 / Fr) / jetThickness; // maybe domainLength
+    G.x = gravity;
 
     /* We use a static refinement down to *maxlevel* in a plan twice the width. */
     refine(fabs(y) < 2. * jetThickness && level < maxlevel);
@@ -111,10 +119,8 @@ event init(t = 0)
 }
 
 
-
 // =======================================================
 // Log ===================================================
-
 event logfile(i++)
 {
     if (i == 0)
@@ -127,15 +133,13 @@ event logfile(i++)
 }
 
 
-
 // =======================================================
 // Movie =================================================
-
 event movie(t += tStep; t <= tEnd)
 { 
     scalar omega[];
     vorticity(u, omega);
-    view(tx = -.5);
+    view(tx = -.5, quat = {0., 0., 0., 0.});
     clear();
     draw_vof("f");
     //squares("omega", linear = true, spread = 10);
@@ -146,10 +150,8 @@ event movie(t += tStep; t <= tEnd)
 }
 
 
-
 // =======================================================
 // Mesh adaptation =======================================
-
 event adapt(i++)
 {
     adapt_wavelet({f, u}, (double[]){0.01, uemax, uemax, uemax}, maxlevel, 3);
