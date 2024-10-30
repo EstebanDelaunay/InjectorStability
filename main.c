@@ -1,8 +1,10 @@
-/*
-Atomisation of a pulsed liquid jet
+/* =======================================================================================================
+
 CC99='mpicc -std=c99' qcc -Wall -O2 -autolink -D_MPI=1 main.c -o main -lm -lfb_tiny ; mpirun -np 8 ./main
-*/
-#include <math.h>
+
+qcc -autolink -Wall -O2  main.c -o main -lm -lfb_tiny ; ./main
+
+======================================================================================================= */
 
 #include "navier-stokes/centered.h"
 #include "two-phase.h"
@@ -33,7 +35,7 @@ const double domainLength = 100. * jetThickness;
 scalar f0[];
 const double Re = 10;
 const double Fr = 1.;
-const double Bo = 30.;
+const double Bo = 30.; // better to use weber
 
 // Density
 const double rhoL = 1.;
@@ -51,7 +53,7 @@ const double SIGMA = (rhoL - rhoG) * gravity * jetThickness * jetThickness / Bo;
 
 // =======================================================
 // Mesh parameters =======================================
-const int maxlevel = 8; // default maximum level of refinement
+const int maxlevel = 11; // default maximum level of refinement
 const double uemax = 0.1; // error threshold on velocity
 
 
