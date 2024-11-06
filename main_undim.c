@@ -17,14 +17,14 @@ CC99='mpicc -std=c99' qcc -Wall -O2 -autolink -D_MPI=1 main.c -o main -lm -lfb_t
 
 // =======================================================
 // Time parameters =======================================
-const double tEnd = 0.1e0;
+const double tEnd = 10e0;
 const double tStep = 1e-1;
 
 
 // =======================================================
 // Space parameters ======================================
-const double jetThickness = 1e0;
-const double domainLength = 50. * jetThickness;
+const double jetThickness = 0.1;
+const double domainLength = 100. * jetThickness;
 
 
 // =======================================================
@@ -32,45 +32,46 @@ const double domainLength = 50. * jetThickness;
 // L means liquid ; G means gaz
 
 scalar f0[];
+const double Re = 10;
+const double Fr = 0.1;
+const double We = 0.1;
 
 // Density
-const double rhoL = 1;
-const double rhoG = 1e-3;
+const double rhoL = 1.;
+const double rhoG = rhoL * 1e-3;
 // Viscosity
 const double muL= 1e-3;
 const double muG = 1e-5;
 // Velocity (defined by Re)
-const double u0 = 1e-1;
+const double u0 = Re * muL / ( rhoL  * jetThickness);
 // Gravity (defined by Fr)
-const double gravity = 10;
+const double gravity = (u0 / Fr) * (u0 / Fr) / jetThickness;
 // Surface tension (defined by We)
-const double sigma = 72.5e-5;
-
-const double Re = rhoL * u0 * jetThickness / muL;
-const double Fr = u0 * u0 / (gravity * jetThickness);
-const double We = rhoL * u0 * u0 * jetThickness / sigma;
+const double sigma = rhoL * u0 * u0 * jetThickness / (2 * We);
 
 
 // =======================================================
 // Mesh parameters =======================================
 const int maxlevel = 9; // default maximum level of refinement
-const double uemax = 1e-3; // error threshold on velocity
+const double uemax = 0.1; // error threshold on velocity
 
 
 // =======================================================
 // Boundary conditions ===================================
-// inflow
+// The inflow condition fixes the velocity
 u.n[left] = dirichlet(f0[] * u0);
 u.t[left] = dirichlet(0);
-p[left] = neumann(neumann_pressure(0));
-f[left] = dirichlet(f0[]);
+p[left] = neumann(0);
 
 // Outflow uses standard Neumann/Dirichlet conditions.
 u.n[right] = neumann(0);
 u.t[right] = neumann(0);
 p[right]    = dirichlet(0.);
 pf[right]   = dirichlet(0.);
-f[right] = neumann(0);
+
+// Fraction boundaries
+f[left] = f0[];
+f[right] = dirichlet(0);
 
 
 // =======================================================
@@ -88,8 +89,8 @@ int main()
     rho1 = 1.;
     rho2 = rho1 * 1e-3;
 
-    mu1 = muL;
-    mu2 = muG;
+    mu1 = 1e-3;
+    mu2 = 1e-5;
 
     f.sigma = sigma;
 
@@ -101,7 +102,7 @@ int main()
 // Initial conditions ====================================
 event init(t = 0)
 {
-    TOLERANCE = 1e-3 [*];
+    TOLERANCE = 1e-4 [*];
 
     G.x = gravity;
 
@@ -118,8 +119,6 @@ event init(t = 0)
         f[] = f0[];
         u.x[] = u0 * f[];
     }
-
-
 }
 
 
@@ -156,7 +155,7 @@ event movie(t += tStep; t <= tEnd)
     //squares("u.x", linear = true);
     //cells();
     //box();
-    draw_string(str = "Re", pos = 3, size = 25, lc = {255.,255.,255.}, lw = 4);
+    draw_string(str = "Re", pos = 3, lc = {0.,0.,0.}, lw = 4);
     save("movie.mp4");
 }
 
