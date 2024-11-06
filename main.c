@@ -10,6 +10,7 @@ qcc -autolink -Wall -O2  main.c -o main -lm -lfb_tiny ; ./main
 #include "two-phase.h"
 #include "tension.h"
 #include "reduced.h"
+// use multigrid !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #include "view.h"
 #include "common.h"
@@ -68,7 +69,7 @@ const double uemax = 1e-3;
 
 u.n[left] = dirichlet(f0[] * u0);
 u.t[left] = dirichlet(0.);
-p[left]   = neumann(0.);
+//p[left]   = neumann(0.);
 f[left]   = f0[];
 
 // Outflow
