@@ -1,13 +1,33 @@
-/*
-Atomisation of a pulsed liquid jet
+@if _XOPEN_SOURCE < 700
+  @undef _XOPEN_SOURCE
+  @define _XOPEN_SOURCE 700
+@endif
+@if _GNU_SOURCE
+@include <stdint.h>
+@include <string.h>
+@include <fenv.h>
+@endif
+#define _CATCH
+#define dimension 2
+#define BGHOSTS 2
+#include "common.h"
+#include "grid/quadtree.h"
+#ifndef BASILISK_HEADER_0
+#define BASILISK_HEADER_0
+#line 1 "main.c"
+/* =======================================================================================================
+
 CC99='mpicc -std=c99' qcc -Wall -O2 -autolink -D_MPI=1 main.c -o main -lm -lfb_tiny ; mpirun -np 8 ./main
-*/
-#include <math.h>
+
+qcc -autolink -Wall -O2  main.c -o main -lm -lfb_tiny ; ./main
+
+======================================================================================================= */
 
 #include "navier-stokes/centered.h"
 #include "two-phase.h"
 #include "tension.h"
 #include "reduced.h"
+// use multigrid !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #include "view.h"
 #include "common.h"
@@ -17,80 +37,85 @@ CC99='mpicc -std=c99' qcc -Wall -O2 -autolink -D_MPI=1 main.c -o main -lm -lfb_t
 
 // =======================================================
 // Time parameters =======================================
-const double tEnd = 10e0;
+
+const double tEnd = 1e0;
 const double tStep = 1e-1;
 
 
 // =======================================================
 // Space parameters ======================================
-const double jetThickness = 0.1;
-const double domainLength = 100. * jetThickness;
+
+const double jetThickness = 1e0;
+const double domainLength = 50. * jetThickness;
 
 
 // =======================================================
 // Physical parameters ===================================
-// L means liquid ; G means gaz
+// L for liquid ; G for gaz
 
 scalar f0[];
-const double Re = 10;
-const double Fr = 0.1;
-const double We = 0.1;
+char name[80];
 
 // Density
-const double rhoL = 1.;
-const double rhoG = rhoL * 1e-3;
+const double rhoL = 1., rhoG = 1e-3;
 // Viscosity
-const double muL= 1e-3;
-const double muG = 1e-5;
-// Velocity (defined by Re)
-const double u0 = Re * muL / ( rhoL  * jetThickness);
-// Gravity (defined by Fr)
-const double gravity = (u0 / Fr) * (u0 / Fr) / jetThickness;
-// Surface tension (defined by We)
-const double sigma = rhoL * u0 * u0 * jetThickness / (2 * We);
+const double muL= 1e-3, muG = 1e-5;
+// Velocity
+const double u0 = 1e-1;
+// Gravity
+const double gravity = 10;
+// Surface tension
+const double sigma = 71.97e-3;
+
+const double Re = rhoL * u0 * jetThickness / muL;
+const double Fr = u0 * u0 / (gravity * jetThickness);
+const double We = rhoL * u0 * u0 * jetThickness / sigma;
 
 
 // =======================================================
 // Mesh parameters =======================================
-const int maxlevel = 9; // default maximum level of refinement
-const double uemax = 0.1; // error threshold on velocity
+
+const int maxlevel = 8;
+const double uemax = 1e-3;
 
 
 // =======================================================
 // Boundary conditions ===================================
-// The inflow condition fixes the velocity
+
+// Inflow
+
 u.n[left] = dirichlet(f0[] * u0);
-u.t[left] = dirichlet(0);
-p[left] = neumann(0);
+u.t[left] = dirichlet(0.);
+//p[left]   = neumann(0.);
+f[left]   = f0[];
 
-// Outflow uses standard Neumann/Dirichlet conditions.
-u.n[right] = neumann(0);
-u.t[right] = neumann(0);
-p[right]    = dirichlet(0.);
-pf[right]   = dirichlet(0.);
+// Outflow
 
-// Fraction boundaries
-f[left] = f0[];
-f[right] = dirichlet(0);
+u.n[right] = neumann(0.);
+u.t[right] = neumann(0.);
+p[right]   = dirichlet(0.);
+pf[right]  = dirichlet(0.);
+
+f[right]   = dirichlet(0.);
 
 
 // =======================================================
 // main ==================================================
 int main()
 {
-    //periodic(front);
+    //periodic(top);
 
     //init_grid(1 << maxlevel);
-    init_grid(64);
+    init_grid(1 << 7);
 
     origin(0., -domainLength/2.);
     size(domainLength);
 
-    rho1 = 1.;
-    rho2 = rho1 * 1e-3;
+    rho1 = rhoL;
+    rho2 = rhoG;
 
-    mu1 = 1e-3;
-    mu2 = 1e-5;
+    mu1 = muL;
+    mu2 = muG;
 
     f.sigma = sigma;
 
@@ -102,14 +127,14 @@ int main()
 // Initial conditions ====================================
 event init(t = 0)
 {
-    TOLERANCE = 1e-4 [*];
+    TOLERANCE = 1e-3 [*];
 
     G.x = gravity;
 
-    /* We use a static refinement down to *maxlevel* in a plan twice the width. */
-    refine(fabs(y) < 2. * jetThickness && level < maxlevel);
+    /* static refinement down to *maxlevel* in a plan twice the width. */
+    refine(sq(y) < 2. * sq(jetThickness) && level < maxlevel);
 
-    fraction(f0, fabs(y) < jetThickness );
+    fraction(f0, sq(jetThickness) - sq(y));
 
     f0.refine = f0.prolongation = fraction_refine;
     restriction({f0}); // for boundary conditions on levels
@@ -129,8 +154,8 @@ event logfile(i++)
     if (i == 0)
     {
         fprintf(stderr, "-----------------------------------------------------\n");
-        fprintf(stderr, " Re |  Fr |  We |    u0   | gravity |  sigma  \n");
-        fprintf(stderr, "%3.f | %3.f | %3.f | %1.1e | %1.1e | %1.1e    \n", Re, Fr, We, u0, gravity, sigma);
+        fprintf(stderr, "   Re   |    Fr   |    We   |    u0   | gravity |  sigma  \n");
+        fprintf(stderr, "%1.1e | %1.1e | %1.1e | %1.1e | %1.1e | %1.1e    \n", Re, Fr, We, u0, gravity, sigma);
         fprintf(stderr, "-----------------------------------------------------\n");
         fprintf(stderr, "   t    |    dt    | p.i | f.i | u.i | ncells | perf \n");
         fprintf(stderr, "        |          |     |     |     |        |      \n");
@@ -142,27 +167,30 @@ event logfile(i++)
 
 // =======================================================
 // Movie =================================================
+
+
 event movie(t += tStep; t <= tEnd)
 { 
     scalar omega[];
     vorticity(u, omega);
-    view(quat = {0., 0., -cos(pi/4.), cos(pi/4.)}, tx = 0., ty = -0.5);
+    view(fov = 25., quat = {0., 0., cos(-pi/4.), cos(pi/4.)}, tx = 0., ty = 0.5);
 
     clear();
     draw_vof("f");
     squares("f", min=0., max=1.);
-    //squares("u.x", min=-2.5, max=2.5);
-    //squares("u.x", linear = true);
-    //cells();
-    //box();
-    draw_string(str = "Re", pos = 3, lc = {0.,0.,0.}, lw = 4);
+
+    sprintf(name, "out_p_%d_%.3f_%.3f_%.3f__%.5f.dat", maxlevel, Re, Fr, We, f.sigma);
+    draw_string(str = "Re", pos = 3, size = 25, lc = {255.,255.,255.}, lw = 4);
     save("movie.mp4");
 }
 
 
 // =======================================================
 // Mesh adaptation =======================================
-event adapt(i++)
-{
-    adapt_wavelet({f, u}, (double[]){0.01, uemax, uemax, uemax}, maxlevel, 3);
-}
+
+// event adapt(i++)
+// {
+//     adapt_wavelet({f, u}, (double[]){0.01, uemax, uemax, uemax}, maxlevel, 5);
+// }
+
+#endif
