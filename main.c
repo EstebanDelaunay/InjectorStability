@@ -24,7 +24,7 @@ qcc -autolink -Wall -O2  main.c -o main -lm -lfb_tiny ; ./main
 // =======================================================
 // Time parameters =======================================
 
-const double tEnd = 3e0;
+const double tEnd = 5e0;
 const double tStep = 1e-1;
 
 
@@ -47,13 +47,13 @@ const double rhoL = 1., rhoG = 1e-3;
 // Viscosity
 const double muL= 1e-3, muG = 1e-5;
 // Velocity
-const double u0 = 2e1;
+const double u0 = 10e0;
 // Gravity.
 const double gravity = 1e1;
 // Surface tension
 const double sigma = 72e-3;
 
-const double Re = rhoL * u0 * jetThickness / muL;
+const double Re = rhoL * u0 * domainLength / muL;
 const double Fr = u0 * u0 / (gravity * jetThickness);
 const double We = rhoL * u0 * u0 * jetThickness / sigma;
 
@@ -88,7 +88,7 @@ f[right]   = dirichlet(0.);
 // main ==================================================
 int main()
 {
-    //periodic(top);
+    //periodic(front);
 
     init_grid(1 << maxlevel);
 
@@ -156,26 +156,27 @@ event logfile(i++)
 
 event movie(t += tStep; t <= tEnd)
 { 
-    view(fov = 25., quat = {0., 0., cos(-pi/4.), cos(pi/4.)}, tx = 0., ty = 0.5, width = 500, height = 500);
+    view(fov = 20., quat = {0., 0., cos(-pi/4.), cos(pi/4.)}, tx = 0., ty = 0.5, width = 750, height = 750);
 
     // Figure for f
     clear();
     draw_vof("f");
     //squares("f", min=0., max=1.);
     draw_vof ("f", filled = 1, fc = {0.1, 0.1, 0.8});
-    begin_mirror({0,-1});
-    draw_vof ("f", filled = 1, fc = {0.1, 0.1, 0.8});
-    end_mirror();
+    //begin_mirror({0,-1});
+    //draw_vof ("f", filled = 1, fc = {0.1, 0.1, 0.8});
+    //end_mirror();
     //sprintf(name, "out_f_%.3f_%.3f_%.3f_%.5f.mp4", Re, Fr, We, f.sigma);
     save("movie_f.mp4");
 
     // Figure for u.x
     clear();
+    draw_vof("f");
+    squares("u.x", linear = true);
+    //begin_mirror({0,-1});
     //draw_vof("f");
-    squares("u.x", linear = true);
-    begin_mirror({0,-1});
-    squares("u.x", linear = true);
-    end_mirror();
+    //squares("u.x", linear = true);
+    //end_mirror();
     //sprintf(name, "out_u_%.3f_%.3f_%.3f_%.5f.mp4", Re, Fr, We, f.sigma);
     save("movie_u.mp4");
 
@@ -185,9 +186,9 @@ event movie(t += tStep; t <= tEnd)
     clear();
     //draw_vof("f");
     squares("omega", linear = true);
-    begin_mirror({0,-1});
-    squares("omega", linear = true);
-    end_mirror();
+    //begin_mirror({0,-1});
+    //squares("omega", linear = true);
+    //end_mirror();
     //sprintf(name, "out_w_%.3f_%.3f_%.3f_%.5f.mp4", Re, Fr, We, f.sigma);
     save("movie_w.mp4");
 }
