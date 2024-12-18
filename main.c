@@ -45,7 +45,7 @@ char name[80];
 // Density
 const double rhoL = 1., rhoG = 1e-3;
 // Viscosity
-const double muL= 1e-3, muG = 1e-5;
+const double muL= 1., muG = 1e-2;
 // Velocity
 const double u0 = 10e0;
 // Gravity.
@@ -161,13 +161,12 @@ event movie(t += tStep; t <= tEnd)
     // Figure for f
     clear();
     draw_vof("f");
-    //squares("f", min=0., max=1.);
     draw_vof ("f", filled = 1, fc = {0.1, 0.1, 0.8});
     //begin_mirror({0,-1});
     //draw_vof ("f", filled = 1, fc = {0.1, 0.1, 0.8});
     //end_mirror();
-    //sprintf(name, "out_f_%.3f_%.3f_%.3f_%.5f.mp4", Re, Fr, We, f.sigma);
-    save("movie_f.mp4");
+    sprintf(name, "movie_f_%.3f.mp4", u0);
+    save(name);
 
     // Figure for u.x
     clear();
@@ -177,19 +176,19 @@ event movie(t += tStep; t <= tEnd)
     //draw_vof("f");
     //squares("u.x", linear = true);
     //end_mirror();
-    //sprintf(name, "out_u_%.3f_%.3f_%.3f_%.5f.mp4", Re, Fr, We, f.sigma);
+    sprintf(name, "movie_u_%.3f.mp4", u0);
     save("movie_u.mp4");
 
     // Figure for the vorticity
     scalar omega[];
     vorticity(u, omega);
     clear();
-    //draw_vof("f");
+    draw_vof("f");
     squares("omega", linear = true);
     //begin_mirror({0,-1});
     //squares("omega", linear = true);
     //end_mirror();
-    //sprintf(name, "out_w_%.3f_%.3f_%.3f_%.5f.mp4", Re, Fr, We, f.sigma);
+    sprintf(name, "movie_w_%.3f.mp4", u0);
     save("movie_w.mp4");
 }
 
