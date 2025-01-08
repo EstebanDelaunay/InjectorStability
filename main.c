@@ -24,14 +24,14 @@ qcc -autolink -Wall -O2  main.c -o main -lm -lfb_tiny ; ./main
 // =======================================================
 // Time parameters =======================================
 
-const double tEnd = 5e0;
-const double tStep = 1e-1;
+const double tEnd = 1e-3;
+const double tStep = 1e-5;
 
 
 // =======================================================
 // Space parameters ======================================
 
-const double jetThickness = 1e0;
+const double jetThickness = 3e-3;
 const double domainLength = 50. * jetThickness;
 
 
@@ -43,19 +43,20 @@ scalar f0[], U0[];
 char name[80];
 
 // Density
-const double rhoL = 1., rhoG = 1e-3;
+const double rhoL = 1000., rhoG = 1.225;
 // Viscosity
-const double muL= 1., muG = 1e-2;
+const double muL= 1e-3, muG = 1.8e-5;
 // Velocity
 const double u0 = 10e0;
 // Gravity.
-const double gravity = 1e1;
+const double gravity = 9.81;
 // Surface tension
 const double sigma = 72e-3;
 
 const double Re = rhoL * u0 * domainLength / muL;
 const double Fr = u0 * u0 / (gravity * jetThickness);
 const double We = rhoL * u0 * u0 * jetThickness / sigma;
+//const double lambda = sqrt(sigma / ((rhoL-rhoG)*gravity)) * 1e3; // 2.7mm
 
 
 // =======================================================
@@ -125,7 +126,7 @@ event init(t = 0)
 
     foreach ()
     {
-        f[] = f0[];
+        //f[] = f0[];
         U0[] = u0 * (1 - sq(y/jetThickness));
         u.x[] = U0[] * f[];
     }
