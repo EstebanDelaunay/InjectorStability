@@ -24,8 +24,8 @@ qcc -autolink -Wall -O2  main.c -o main -lm -lfb_tiny ; ./main
 // =======================================================
 // Time parameters =======================================
 
-const double tEnd = 1e-3;
-const double tStep = 1e-5;
+const double tEnd = 1e-2;
+const double tStep = 1e-4;
 
 
 // =======================================================
