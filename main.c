@@ -9,7 +9,7 @@ qcc -autolink -Wall -O2  main.c -o main -lm -lfb_tiny ; ./main
 #include "grid/multigrid.h"
 
 #include "navier-stokes/centered.h"
-//#include "navier-stokes/conserving.h"
+//#include "navier-stokes/conserving.h" // TODO : use conserving.h
 //#include "navier-stokes/perfs.h"
 
 #include "two-phase.h"
@@ -24,14 +24,14 @@ qcc -autolink -Wall -O2  main.c -o main -lm -lfb_tiny ; ./main
 // =======================================================
 // Time parameters =======================================
 
-const double tEnd = 1e-2;
-const double tStep = 1e-4;
+const double tEnd = 2e-1;
+const double tStep = 2e-4;
 
 
 // =======================================================
 // Space parameters ======================================
 
-const double jetThickness = 3e-3;
+const double jetThickness = 3e-3; // 5 or 10mm
 const double domainLength = 50. * jetThickness;
 
 
@@ -47,15 +47,15 @@ const double rhoL = 1000., rhoG = 1.225;
 // Viscosity
 const double muL= 1e-3, muG = 1.8e-5;
 // Velocity
-const double u0 = 10e0;
+const double u0 = 5e-1; 
 // Gravity.
 const double gravity = 9.81;
 // Surface tension
 const double sigma = 72e-3;
 
-const double Re = rhoL * u0 * domainLength / muL;
+const double Re = rhoL * u0 * jetThickness / muL; // 1.800
 const double Fr = u0 * u0 / (gravity * jetThickness);
-const double We = rhoL * u0 * u0 * jetThickness / sigma;
+const double We = rhoL * u0 * u0 * jetThickness / sigma; // fixed Weber number to find speed with jetThickness (We = 0.002 -> 6k, smooth around = ???)
 //const double lambda = sqrt(sigma / ((rhoL-rhoG)*gravity)) * 1e3; // 2.7mm
 
 
@@ -87,6 +87,7 @@ f[right]   = dirichlet(0.);
 
 // =======================================================
 // main ==================================================
+
 int main()
 {
     //periodic(front);
@@ -110,6 +111,7 @@ int main()
 
 // =======================================================
 // Initial conditions ====================================
+
 event init(t = 0)
 {
     TOLERANCE = 1e-3 [*];
@@ -135,6 +137,7 @@ event init(t = 0)
 
 // =======================================================
 // Log ===================================================
+
 event logfile(i++)
 {
     if (i == 0)
@@ -154,7 +157,6 @@ event logfile(i++)
 // =======================================================
 // Movie =================================================
 
-
 event movie(t += tStep; t <= tEnd)
 { 
     view(fov = 20., quat = {0., 0., cos(-pi/4.), cos(pi/4.)}, tx = 0., ty = 0.5, width = 750, height = 750);
@@ -166,7 +168,7 @@ event movie(t += tStep; t <= tEnd)
     //begin_mirror({0,-1});
     //draw_vof ("f", filled = 1, fc = {0.1, 0.1, 0.8});
     //end_mirror();
-    sprintf(name, "movie_f_%.3f.mp4", u0);
+    sprintf(name, "movie_f_%1.1e.mp4", jetThickness);
     save(name);
 
     // Figure for u.x
@@ -177,8 +179,8 @@ event movie(t += tStep; t <= tEnd)
     //draw_vof("f");
     //squares("u.x", linear = true);
     //end_mirror();
-    sprintf(name, "movie_u_%.3f.mp4", u0);
-    save("movie_u.mp4");
+    sprintf(name, "movie_u_%1.1e.mp4", jetThickness);
+    save(name);
 
     // Figure for the vorticity
     scalar omega[];
@@ -189,8 +191,8 @@ event movie(t += tStep; t <= tEnd)
     //begin_mirror({0,-1});
     //squares("omega", linear = true);
     //end_mirror();
-    sprintf(name, "movie_w_%.3f.mp4", u0);
-    save("movie_w.mp4");
+    sprintf(name, "movie_w_%1.1e.mp4", jetThickness);
+    save(name);
 }
 
 
