@@ -9,23 +9,24 @@ qcc -autolink -Wall -O2  main.c -o main -lm -lfb_tiny ; ./main
 #include "grid/multigrid.h"
 
 #include "navier-stokes/centered.h"
-//#include "navier-stokes/conserving.h" // TODO : use conserving.h
-//#include "navier-stokes/perfs.h"
 
 #include "two-phase.h"
 #include "tension.h"
 #include "reduced.h"
 
+#include "navier-stokes/conserving.h"
+
 #include "view.h"
 #include "common.h"
 #include "draw.h"
 
+//#include "navier-stokes/perfs.h"
 
 // =======================================================
 // Time parameters =======================================
 
-const double tEnd = 2e-1;
-const double tStep = 2e-4;
+const double tEnd = 5e-1;
+const double tStep = 2e-3;
 
 
 // =======================================================
@@ -53,10 +54,10 @@ const double gravity = 9.81;
 // Surface tension
 const double sigma = 72e-3;
 
-const double Re = rhoL * u0 * jetThickness / muL; // 1.800
+const double Re = rhoL * u0 * jetThickness / muL; // 1800
 const double Fr = u0 * u0 / (gravity * jetThickness);
 const double We = rhoL * u0 * u0 * jetThickness / sigma; // fixed Weber number to find speed with jetThickness (We = 0.002 -> 6k, smooth around = ???)
-//const double lambda = sqrt(sigma / ((rhoL-rhoG)*gravity)) * 1e3; // 2.7mm
+//double lambda = sqrt(sigma / ((rhoL-rhoG)*gravity)) * 1e3; // 2.7mm
 
 
 // =======================================================
@@ -146,11 +147,12 @@ event logfile(i++)
         fprintf(stderr, "   Re   |    Fr   |    We   |    u0   | gravity |  sigma  \n");
         fprintf(stderr, "%1.1e | %1.1e | %1.1e | %1.1e | %1.1e | %1.1e    \n", Re, Fr, We, u0, gravity, sigma);
         fprintf(stderr, "-----------------------------------------------------\n");
-        fprintf(stderr, "   t    |    dt    | p.i | f.i | u.i | ncells | perf \n");
-        fprintf(stderr, "        |          |     |     |     |        |      \n");
+        fprintf(stderr, " t / t_max | dt | p.i | f.i | u.i | ncells | perf \n");
+        fprintf(stderr, "--------------------------------------------------------\n");
+
     }
 
-    fprintf(stderr, "%.5f | %.2e |  %2d |  %2d |  %2d | %6ld | %.2f\n", t, dt, mgp.i, mgpf.i, mgu.i, grid->tn, perf.t);
+    fprintf(stderr, "%.5f / %.5f | %.2e |  %2d |  %2d |  %2d | %6ld | %.2f\n", t, tEnd, dt, mgp.i, mgpf.i, mgu.i, grid->tn, perf.t);
 }
 
 
