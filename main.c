@@ -25,8 +25,8 @@ qcc -autolink -Wall -O2  main.c -o main -lm -lfb_tiny ; ./main
 // =======================================================
 // Time parameters =======================================
 
-const double tEnd = 5e-1;
-const double tStep = 2e-3;
+const double tEnd = 1e-1;
+const double tStep = 1e-3;
 
 
 // =======================================================
@@ -47,18 +47,24 @@ char name[80];
 const double rhoL = 1000., rhoG = 1.225;
 // Viscosity
 const double muL= 1e-3, muG = 1.8e-5;
-// Velocity
-const double u0 = 5e-1; 
+
+
 // Gravity.
 const double gravity = 9.81;
 // Surface tension
 const double sigma = 72e-3;
 
-const double Re = rhoL * u0 * jetThickness / muL; // 1800
-const double Fr = u0 * u0 / (gravity * jetThickness);
-const double We = rhoL * u0 * u0 * jetThickness / sigma; // fixed Weber number to find speed with jetThickness (We = 0.002 -> 6k, smooth around = ???)
-//double lambda = sqrt(sigma / ((rhoL-rhoG)*gravity)) * 1e3; // 2.7mm
 
+
+const double Re = 1800;
+//const double u0 = (Re * muL) / (rhoL * jetThickness); 
+
+const double We = 0.6; // fixed Weber number to find speed with jetThickness (We = 0.002 -> 6k, smooth around = ???)
+double u0 = sqrt((We * sigma) / (rhoL * jetThickness)); 
+
+
+//double lambda = sqrt(sigma / ((rhoL-rhoG)*gravity)) * 1e3; // 2.7mm
+double Fr = u0 * u0 / (gravity * jetThickness);
 
 // =======================================================
 // Mesh parameters =======================================
