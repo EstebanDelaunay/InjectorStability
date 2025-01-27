@@ -1,0 +1,45 @@
+// =======================================================
+// Time parameters =======================================
+
+const double tEnd = 2.2e-1;
+const double tStep = 1e-2;
+
+
+// =======================================================
+// Space parameters ======================================
+
+const double jetThickness = 3e-3; // 5 or 10mm
+const double domainLength = 50. * jetThickness;
+
+
+// =======================================================
+// Physical parameters ===================================
+// L for liquid ; G for gaz
+
+scalar f0[], U0[];
+char name[80];
+
+// Density
+const double rhoL = 1000., rhoG = 1.225;
+// Viscosity
+const double muL= 1e-3, muG = 1.8e-5;
+
+
+// Gravity.
+const double gravity = 9.81;
+// Surface tension
+const double sigma = 72e-3;
+
+
+
+double Re;
+const double We = 2.4; // fixed Weber number to find speed with jetThickness (We = 0.002 -> 6k, smooth around = ???)
+
+double u0;
+double lambda; // 2.7mm
+
+// =======================================================
+// Mesh parameters =======================================
+
+const int maxlevel = 8;
+const double uemax = 1e-3;

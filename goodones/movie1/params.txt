@@ -1,0 +1,2 @@
+we = 10
+jetthickness = 3mm
