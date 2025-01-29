@@ -1,12 +1,28 @@
+@if _XOPEN_SOURCE < 700
+  @undef _XOPEN_SOURCE
+  @define _XOPEN_SOURCE 700
+@endif
+@if _GNU_SOURCE
+@include <stdint.h>
+@include <string.h>
+@include <fenv.h>
+@endif
+#define _CATCH
+#define dimension 3
+#define BGHOSTS 2
+#include "common.h"
+#ifndef BASILISK_HEADER_0
+#define BASILISK_HEADER_0
+#line 1 "main3D.c"
 /* =======================================================================================================
 
-CC99='mpicc -std=c99' qcc -Wall -O2 -autolink -D_MPI=1 main.c -o main -lm -lfb_tiny ; mpirun -np 8 ./main
+CC99='mpicc -std=c99' qcc -Wall -O2 -autolink -D_MPI=1 main3D.c -o main3D -lm -lfb_tiny ; mpirun -np 8 ./main3D
 
-qcc -autolink -Wall -O2  main.c -o main -lm -lfb_tiny ; ./main
+qcc -autolink -Wall -O2  main3D.c -o main3D -lm -lfb_tiny ; ./main3D
 
 ======================================================================================================= */
 
-//#include "grid/multigrid.h"
+#include "grid/multigrid3D.h"
 
 #include "navier-stokes/centered.h"
 
@@ -20,12 +36,12 @@ qcc -autolink -Wall -O2  main.c -o main -lm -lfb_tiny ; ./main
 #include "common.h"
 #include "draw.h"
 
-#include "navier-stokes/perfs.h"
+//#include "navier-stokes/perfs.h"
 
 // =======================================================
 // Time parameters =======================================
 
-const double tEnd = 2e-1;
+const double tEnd = 0.1e0;
 const double tStep = 5e-3;
 
 // =======================================================
@@ -62,25 +78,32 @@ double lambda; // 2.7mm
 // =======================================================
 // Mesh parameters =======================================
 
-const int maxlevel = 7;
+const int maxlevel = 6;
 const double uemax = 1e-3;
 
 // =======================================================
 // Boundary conditions ===================================
 
-
+// =======================================================
 // Inflow
 
 u.n[left] = dirichlet(f0[] * u0 * (1 - sq(y/jetThickness)));
 u.t[left] = dirichlet(0.);
+u.r[left]  = dirichlet(0);
+
 uf.n[left] = dirichlet(f0[] * u0 * (1 - sq(y/jetThickness)));
 uf.t[left] = dirichlet(0.);
+uf.r[left] = dirichlet(0.);
+
 f[left]   = f0[];
 
+// =======================================================
 // Outflow
 
 u.n[right] = neumann(0.);
 u.t[right] = neumann(0.);
+u.r[right] = neumann(0.);
+
 p[right]   = dirichlet(0.);
 pf[right]  = dirichlet(0.);
 
@@ -91,7 +114,7 @@ f[right]   = dirichlet(0.);
 
 int main()
 {
-    //periodic(front);
+    periodic(front);
 
     init_grid(1 << maxlevel);
 
@@ -125,7 +148,7 @@ event init(t = 0)
     G.x = gravity;
 
     fraction(f0, sq(jetThickness) - sq(y));
-    f0.refine = f0.prolongation = fraction_refine;
+    //f0.refine = f0.prolongation = fraction_refine;
     restriction({f0});
 
     foreach ()
@@ -164,47 +187,40 @@ event logEnd(t=tEnd)
 // =======================================================
 // Movie =================================================
 
-event movie(t += tStep; t <= tEnd)
-{ 
-    view(fov = 22., quat = {0., 0., cos(-pi/4.), cos(pi/4.)}, tx = 0., ty = 0.5, width = 750, height = 750);
+// event movie (t += tStep)
+// {
+//     view (camera = "iso", fov = 30, tx = 0.4, ty = 0.4, width = 750, height = 750);
+//     clear();
+//     draw_vof ("f");
+//     save ("movie.mp4");
+// }
 
-    // Figure for f
+event movie (t += tStep)
+{
+    view(fov = 38, camera = "iso", ty = .4, width = 750, height = 750, bg = {1,1,1}, samples = 4);
+
     clear();
-    box();
-    draw_vof("f");
-    draw_vof ("f", filled = 1, fc = {0.1, 0.1, 0.8});
-    sprintf(name, "movie_f_%1.1e.mp4", jetThickness); // TODO : add We
-    save(name);
 
-    // Figure for f with cells
-    clear();
-    cells();
-    draw_vof("f");
-    draw_vof ("f", filled = 1, fc = {0.1, 0.1, 0.8});
-    sprintf(name, "movie_fc_%1.1e.mp4", jetThickness);
-    save(name);
+    //squares ("u.y", linear = true);
+    squares ("u.x", linear = true, n = {1,0,0});
 
-    // Figure for u.x
-    clear();
-    draw_vof("f");
-    squares("u.x", linear = true);
-    sprintf(name, "movie_u_%1.1e.mp4", jetThickness);
-    save(name);
-
-    // Figure for the vorticity
+    // Vorticity
     scalar omega[];
-    vorticity(u, omega);
-    clear();
+    vorticity (u, omega);
+    squares("omega", linear = true, n = {0,1,0});
+
+    // Volume fraction
     draw_vof("f");
-    squares("omega", linear = true);
-    sprintf(name, "movie_w_%1.1e.mp4", jetThickness);
-    save(name);
+
+    save("movie.mp4");
 }
 
 // =======================================================
 // Mesh adaptation =======================================
 
-event adapt(i++)
-{
-    adapt_wavelet({f, u}, (double[]){uemax, uemax, uemax, uemax}, maxlevel, 3);
-}
+// event adapt(i++)
+// {
+//     adapt_wavelet({f, u}, (double[]){0.01, uemax, uemax, uemax}, maxlevel, 3);
+// }
+
+#endif
