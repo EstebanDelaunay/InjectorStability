@@ -6,7 +6,7 @@ qcc -autolink -Wall -O2  main3D.c -o main3D -lm -lfb_tiny ; ./main3D
 
 ======================================================================================================= */
 
-#include "grid/octree.h"
+#include "grid/multigrid3D.h"
 
 #include "navier-stokes/centered.h"
 
@@ -25,7 +25,7 @@ qcc -autolink -Wall -O2  main3D.c -o main3D -lm -lfb_tiny ; ./main3D
 // =======================================================
 // Time parameters =======================================
 
-const double tEnd = 0.1e-1;
+const double tEnd = 0.1e0;
 const double tStep = 5e-3;
 
 // =======================================================
@@ -62,7 +62,7 @@ double lambda; // 2.7mm
 // =======================================================
 // Mesh parameters =======================================
 
-const int maxlevel = 8;
+const int maxlevel = 6;
 const double uemax = 1e-3;
 
 // =======================================================
@@ -98,7 +98,7 @@ f[right]   = dirichlet(0.);
 
 int main()
 {
-    //periodic(front);
+    periodic(front);
 
     init_grid(1 << maxlevel);
 
@@ -132,12 +132,12 @@ event init(t = 0)
     G.x = gravity;
 
     fraction(f0, sq(jetThickness) - sq(y));
-    f0.refine = f0.prolongation = fraction_refine;
+    //f0.refine = f0.prolongation = fraction_refine;
     restriction({f0});
 
     foreach ()
     {
-        //f[] = f0[];
+        f[] = f0[]  * (x < 0.015);
         U0[] = u0 * (1 - sq(y/jetThickness));
         u.x[] = U0[] * f[];
     }
@@ -171,25 +171,38 @@ event logEnd(t=tEnd)
 // =======================================================
 // Movie =================================================
 
+// event movie (t += tStep)
+// {
+//     view (camera = "iso", fov = 30, tx = 0.4, ty = 0.4, width = 750, height = 750);
+//     clear();
+//     draw_vof ("f");
+//     save ("movie.mp4");
+// }
+
 event movie (t += tStep)
 {
-    scalar pid[];
+    view(fov = 38, camera = "iso", ty = .4, width = 750, height = 750, bg = {1,1,1}, samples = 4);
 
-    foreach()
-    {
-        pid[] = fmod(pid()*(npe() + 37), npe());
-    }
-
-    view (camera = "iso",fov = 14.5, tx = -0.418, ty = 0.288,width = 1600, height = 1200);
     clear();
-    draw_vof ("f");
-    save ("movie.mp4");
+
+    //squares ("u.y", linear = true);
+    squares ("u.x", linear = true, n = {1,0,0});
+
+    // Vorticity
+    scalar omega[];
+    vorticity (u, omega);
+    squares("omega", linear = true, n = {0,1,0});
+
+    // Volume fraction
+    draw_vof("f");
+
+    save("movie.mp4");
 }
 
 // =======================================================
 // Mesh adaptation =======================================
 
-event adapt(i++)
-{
-    adapt_wavelet({f, u}, (double[]){0.01, uemax, uemax, uemax}, maxlevel, 3);
-}
+// event adapt(i++)
+// {
+//     adapt_wavelet({f, u}, (double[]){0.01, uemax, uemax, uemax}, maxlevel, 3);
+// }

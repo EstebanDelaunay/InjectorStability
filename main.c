@@ -62,7 +62,7 @@ double lambda; // 2.7mm
 // =======================================================
 // Mesh parameters =======================================
 
-const int maxlevel = 9;
+const int maxlevel = 7;
 const double uemax = 1e-3;
 
 // =======================================================
@@ -129,7 +129,7 @@ event init(t = 0)
 
     foreach ()
     {
-        //f[] = f0[];
+        f[] = f0[] * (x < 0.015);
         U0[] = u0 * (1 - sq(y/jetThickness));
         u.x[] = U0[] * f[];
     }
