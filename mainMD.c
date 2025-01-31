@@ -1,8 +1,8 @@
 /* =======================================================================================================
 
-CC99='mpicc -std=c99' qcc -Wall -O2 -autolink -D_MPI=1 main3D.c -o main3D -lm -lfb_tiny ; mpirun -np 8 ./main3D
+CC99='mpicc -std=c99' qcc -Wall -O2 -autolink -D_MPI=1 mainMD.c -o mainMD -lm -lfb_tiny ; mpirun -np 8 ./mainMD
 
-qcc -autolink -Wall -O2  main3D.c -o main3D -lm -lfb_tiny ; ./main3D
+qcc -autolink -Wall -O2  mainMD.c -o mainMD -lm -lfb_tiny ; ./mainMD
 
 ======================================================================================================= */
 
@@ -21,6 +21,9 @@ qcc -autolink -Wall -O2  main3D.c -o main3D -lm -lfb_tiny ; ./main3D
 #include "draw.h"
 
 #include "navier-stokes/perfs.h"
+
+#include "signature.h"
+#define SIGN_LEV 11
 
 // =======================================================
 // Time parameters =======================================
@@ -62,8 +65,10 @@ double lambda; // 2.7mm
 // =======================================================
 // Mesh parameters =======================================
 
-const int maxlevel = 8;
+const int maxlevel = 6;
 const double uemax = 1e-3;
+
+const double DelT_MD = 0.5;
 
 // =======================================================
 // Boundary conditions ===================================
@@ -197,4 +202,42 @@ event movie (t += tStep)
 event adapt(i++)
 {
     adapt_wavelet({f, u}, (double[]){uemax, uemax, uemax, uemax}, maxlevel, 3);
+}
+
+// =======================================================
+// Manifold Death Algorithm ==============================
+
+event neck_detect(t = 0; t <= tEnd; t += DelT_MD){
+    foreach()
+    {
+        phii[] = 2*f[] - 1;
+        sign[] = 7;
+    }
+
+    int l_sign = SIGN_LEV;
+
+    for (int ilev = depth() - 1; ilev >= l_sign; ilev--)  
+        foreach_level(ilev)
+        {
+            if(is_refined(cell))
+                restriction_average(point, phii);
+        }
+
+    compute_signature_neigh_level (f, phii, sign, l_sign);
+
+    if (pid()==0)  
+        printf("time %g level used for moments %d and depth is %d \n", t, l_sign, depth()); 
+
+    for (int ilev = l_sign; ilev < depth(); ilev++)  
+        foreach_level(ilev)
+        {
+            sign.prolongation = phii.prolongation = refine_injection;
+            if(is_refined(cell))
+            {
+                sign.prolongation(point, sign);
+                phii.prolongation(point, phii);
+            }
+        }
+
+    change_topology(f, sign, M, l_sign, max_change, &n_holes, large, (int)(17500/DelT_MD*0.5)); 
 }
