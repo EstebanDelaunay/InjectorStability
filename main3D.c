@@ -25,7 +25,7 @@ qcc -autolink -Wall -O2  main3D.c -o main3D -lm -lfb_tiny ; ./main3D
 // =======================================================
 // Time parameters =======================================
 
-const double tEnd = 0.1e0;
+const double tEnd = 0.15e0;
 const double tStep = 5e-3;
 
 // =======================================================

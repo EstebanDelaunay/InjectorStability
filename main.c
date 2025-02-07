@@ -130,7 +130,7 @@ event init(t = 0)
 
     foreach ()
     {
-        f[] = f0[]  * (x < 0.015);
+        //f[] = f0[]  * (x < 0.015);
         U0[] = u0 * (1 - sq(y/jetThickness));
         u.x[] = U0[] * f[];
     }
