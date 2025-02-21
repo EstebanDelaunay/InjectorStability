@@ -62,7 +62,7 @@ double Re, u0, lambda;
 // =======================================================
 // Mesh parameters =======================================
 
-const int maxlevel = 9;
+const int maxlevel = 8;
 const double uemax = 1e-3;
 
 scalar phii[], M[];
@@ -192,7 +192,7 @@ event movie (t += tStep)
     draw_vof("f");
 
     char name[80];
-    sprintf(name, "output/movie_%.3f.png", t);
+    sprintf(name, "movie_case1_%.3f.png", t);
     save(name);
 }
 

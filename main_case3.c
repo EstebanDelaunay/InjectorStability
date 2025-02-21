@@ -48,7 +48,7 @@ char name[80];
 // Density
 const double rhoL = 1000., rhoG = 1.225;
 // Viscosity
-const double muL= 1e-3, muG = 1.8e-5;
+const double muL= 2e-3, muG = 1.8e-5;
 // Gravity.
 const double gravity = 9.81;
 // Surface tension
@@ -62,7 +62,7 @@ double Re, u0, lambda;
 // =======================================================
 // Mesh parameters =======================================
 
-const int maxlevel = 9;
+const int maxlevel = 8;
 const double uemax = 1e-3;
 
 scalar phii[], M[];
@@ -116,11 +116,10 @@ int main()
 
     f.sigma = sigma;
 
-    u0 = sqrt((We * sigma) / (rhoL * jetThickness)); // with We
-    //u0 = (Re * muL) / (rhoL * jetThickness); // with Re
+    u0 = sqrt((We * sigma) / (rhoL * jetThickness));
 
     Re = rhoL * u0 * jetThickness / muL;
-    lambda = sqrt(sigma / ((rhoL-rhoG)*gravity)) * 1e3; // 2.7mm
+    lambda = sqrt(sigma / ((rhoL-rhoG)*gravity)) * 1e3;
 
     run();
 }
@@ -192,7 +191,7 @@ event movie (t += tStep)
     draw_vof("f");
 
     char name[80];
-    sprintf(name, "output/movie_%.3f.png", t);
+    sprintf(name, "movie_case3_%.3f.png", t);
     save(name);
 }
 

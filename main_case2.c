@@ -24,7 +24,7 @@ qcc -autolink -Wall -O2 mainMD.c -o mainMD -lm -lgsl -lcblas -lfb_tiny ; ./mainM
 
 #include "signature.h"
 
-#define SIGN_LEV 7
+#define SIGN_LEV 8
 
 // =======================================================
 // Time parameters =======================================
@@ -62,7 +62,7 @@ double Re, u0, lambda;
 // =======================================================
 // Mesh parameters =======================================
 
-const int maxlevel = 9;
+const int maxlevel = 8;
 const double uemax = 1e-3;
 
 scalar phii[], M[];
@@ -192,7 +192,7 @@ event movie (t += tStep)
     draw_vof("f");
 
     char name[80];
-    sprintf(name, "output/movie_%.3f.png", t);
+    sprintf(name, "movie_case2_%.3f.png", t);
     save(name);
 }
 
